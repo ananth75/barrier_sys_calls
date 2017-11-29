@@ -15,8 +15,8 @@
 #include <string.h>
 #include <sys/syscall.h>
 
-#define T_COUNT1 2
-#define T_COUNT2 0
+#define T_COUNT1 4
+#define T_COUNT2 20
 
 signed int timeout;
 int interval_between_iter;
@@ -32,7 +32,6 @@ void *thread1_function(void *args)
         
         /* Reference: https://stackoverflow.com/questions/13219501/accessing-a-system-call-directly-from-user-program */
         
-        /* DBGG: Check this */
         //printf(" Thread with id %d entering %dth round of synchronization in the child process with  pid %d \n", syscall(SYS_gettid), (i+1),  syscall(SYS_getpid));
         
         ret = syscall(361, *b_id);
@@ -45,7 +44,7 @@ void *thread1_function(void *args)
         
         /* DBGG TODO Randomize this value */
         //usleep(interval_between_iter);
-        sleep(3);
+        sleep(1);
     }
     pthread_exit(0);
 }
@@ -74,7 +73,7 @@ void *thread2_function(void *args)
         
         /* DBGG TODO Randomize this value */
         //usleep(interval_between_iter);
-        sleep(3);
+        sleep(1);
     }
     pthread_exit(0);
 }
@@ -114,7 +113,6 @@ void Child()
     thread_count = T_COUNT2;
     
     ret = syscall(360, thread_count, &barrier_id2, timeout);
-    printf("USpace Child ret %d and barrier id %d\n", ret, barrier_id2); 
     if(ret == -1)
     {
         printf("\nBarrier initialization failed ");
@@ -147,7 +145,7 @@ void Child()
         printf("\nError : barrier id %d not destroyed \n",barrier_id1);
     }
     
-sleep(1);
+	sleep(1);
     if ((ret = syscall(362, barrier_id2)) < 0)
     {
         printf("\nError : barrier id %d not destroyed \n",barrier_id2);
@@ -168,7 +166,7 @@ int main( int argc, char *argv[], char *env[] )
     
     int status = 0;
     timeout = 500;
-    iterations = 2;
+    iterations = 100;
     
     /* Create PID(s) for child processes */
     pid_t child_pid_one, child_pid_two;
@@ -189,7 +187,6 @@ int main( int argc, char *argv[], char *env[] )
     }
 
     /* Parent process */
-    //else if(child_pid_one > 0)
     else
     {
         child_pid_two = fork();

@@ -22,6 +22,7 @@ typedef struct
 {
     int m_thread_count;
     int m_thread_current_count;
+    int waiting_threads_count;
     int m_barrier_id;
     signed int timeout;
     pid_t m_barrier_pid;
@@ -29,6 +30,7 @@ typedef struct
     struct list_head m_barrier;
     wait_queue_head_t m_entry_point;
     wait_queue_head_t m_auxiliary_entry_point;
+    
 }eosi_barrier_t, *p_eosi_barrier_t;
 
 
@@ -37,7 +39,7 @@ static bool barrier_dequeue_started = 0;
 static bool barrier_dequeue_done = 0;
 static bool barrier_wait = 0;
 
-static int waiting_threads_count = 0;
+//static int waiting_threads_count = 0;
 
 /* Auxiliary threads are those which try to sys_barrier_wait() on a barrier while a barrier is still in the process of releasing the previous threads */
 int waiting_auxiliary_threads_count = 0;
@@ -74,7 +76,7 @@ asmlinkage long sys_barrier_wait(unsigned int barrier_id)
     {
         
         ibarrier_iter->m_thread_current_count++;
-        waiting_threads_count++;
+        ibarrier_iter->waiting_threads_count++;
         
         /* Unlock the Mutex */
         spin_unlock(&ibarrier_iter->m_lock);
@@ -87,7 +89,7 @@ asmlinkage long sys_barrier_wait(unsigned int barrier_id)
         {
             waiting_auxiliary_threads_count++;
             spin_unlock(&ibarrier_iter->m_lock);
-            wait_event_interruptible(ibarrier_iter->m_auxiliary_entry_point, barrier_dequeue_done);
+            //wait_event_interruptible(ibarrier_iter->m_auxiliary_entry_point, barrier_dequeue_done);
         }
         else
         {
@@ -101,20 +103,20 @@ asmlinkage long sys_barrier_wait(unsigned int barrier_id)
         printk("@2");
         
         spin_lock(&ibarrier_iter->m_lock);
-        if(waiting_threads_count == 0)
+        if(ibarrier_iter->waiting_threads_count == 0)
         {
             if(waiting_auxiliary_threads_count > 0)
             {
                 barrier_dequeue_done = 1;
 		barrier_dequeue_started = 0;
                 waiting_auxiliary_threads_count = 0;
-                wake_up_all(&ibarrier_iter->m_auxiliary_entry_point);
+                //wake_up_all(&ibarrier_iter->m_auxiliary_entry_point);
             }
-            barrier_wait = 1;
+            barrier_wait = 0;
         }
         else
         {
-            waiting_threads_count--;
+            ibarrier_iter->waiting_threads_count--;
         }
         spin_unlock(&ibarrier_iter->m_lock);
         
